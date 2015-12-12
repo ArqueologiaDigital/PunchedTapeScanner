@@ -18,7 +18,7 @@ It was the first computer designed in Brazil (in the early 70s) and it has a new
 
 To extract a ROM image of the tape, run the program like this:
 
->  ./PunchedTapeScanner ../example/fita_absoluta.2a.0006.96.scan03.png
+>  ./PunchedTapeScanner ../example/fita_absoluta.2a.0006.96.scan03.png output.rom 0
 
 The result will be a file called output.rom that you can examine with:
 

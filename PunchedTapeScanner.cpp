@@ -25,6 +25,10 @@ bool inverted = true; //TODO: command line switch to select
 bool exchange_points = false;
 unsigned char BIT_MASK = 0x7F;
 
+// These vectors will be used to store the coordinates and radius of
+// the detected holes in the scanned image of the punched tape.
+vector<Vec3f> reference_dots, bits;
+
 void set_bit(int addr, int bit){
     //do not attempt to write data off-bounds
     if (addr < 0 || addr > MAX_DATA_SIZE)
@@ -40,11 +44,7 @@ void set_bit(int addr, int bit){
     data[addr] |= (1 << (7-bit));
 }
 
-int main(int argc, char** argv){
-    namedWindow(PROGRAM_NAME, CV_WINDOW_AUTOSIZE);
-
-    if (argv[3][0] == '1') exchange_points = true;
-    
+void init_tape_scanner(){
     /*******************************************************************
      * This program will analize and image of a scanned punched        *
      * tape and will detect the patterns of holes in order to          *
@@ -56,21 +56,15 @@ int main(int argc, char** argv){
     for (int i=0; i < MAX_DATA_SIZE; i++){
         data[i] = 0;
     }
+}
 
-    /***************************************************
-     * Load and the image and preprocess it so that we  *
-     * have the best possible results.                  *
-     ****************************************************/
+void process_frame(Mat src, bool with_pauses){
+    Mat src_gray;
 
-    Mat src, src_gray;
-
-    // Read the image
-    src = imread(argv[1], 1);
-    if (!src.data) return -1;
-
-    // Show your results
-    imshow(PROGRAM_NAME, src);
-    waitKey(0);
+    if (with_pauses){
+        imshow(PROGRAM_NAME, src);
+        waitKey(0);
+    }
 
     // Convert it to gray
     cvtColor(src, src_gray, CV_BGR2GRAY);
@@ -79,16 +73,15 @@ int main(int argc, char** argv){
 
     // Reduce the noise so we avoid false circle detection
     GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
-    imshow(PROGRAM_NAME, src_gray);
-    waitKey(0);
+
+    if (with_pauses){
+        imshow(PROGRAM_NAME, src_gray);
+        waitKey(0);
+    }
 
     /****************************************************
      * Detect geometric elements in the provided image. *
      ****************************************************/
-
-    // These vectors will be used to store the coordinates and radius of
-    // the detected holes in the scanned image of the punched tape.
-    vector<Vec3f> reference_dots, bits;
 
     // Apply the Hough Transform to find the circles
     //TODO: Document the meaning of the parameters in these function calls.
@@ -161,8 +154,11 @@ int main(int argc, char** argv){
         radius = cvRound(reference_dots[i][2]);
         circle(src, center, radius, COLOR_YELLOW, 3, 8, 0);
     }
-    imshow(PROGRAM_NAME, src);
-    waitKey(0);
+
+    if (with_pauses){
+        imshow(PROGRAM_NAME, src);
+        waitKey(0);
+    }
 
     for (size_t i = 0; i < bits.size(); i++){
         Point center(cvRound(bits[i][0]), cvRound(bits[i][1]));
@@ -170,8 +166,10 @@ int main(int argc, char** argv){
         circle(src, center, radius, COLOR_GREEN, 3, 8, 0);
     }
 
-    imshow(PROGRAM_NAME, src);
-    waitKey(0);
+    if (with_pauses){
+        imshow(PROGRAM_NAME, src);
+        waitKey(0);
+    }
 
     radius = 8;
     for (int i = 0; i < N; i++){
@@ -179,8 +177,10 @@ int main(int argc, char** argv){
         circle(src, center, radius, COLOR_RED, 3, 8, 0);
     }
 
-    imshow(PROGRAM_NAME, src);
-    waitKey(0);
+    if (with_pauses){
+        imshow(PROGRAM_NAME, src);
+        waitKey(0);
+    }
 
     if (exchange_points){
         Point tmp = A;
@@ -208,8 +208,10 @@ int main(int argc, char** argv){
         putText(src, text, center+textOffset, fontFace, fontScale, COLOR_RED, thickness, /* lineType */8, /* bottomLeftOrigin */ false);
     }
 
-    imshow(PROGRAM_NAME, src);
-    waitKey(0);
+    if (with_pauses){
+        imshow(PROGRAM_NAME, src);
+        waitKey(0);
+    }
 
 #if 0
     /* This is the new implementation, but I was not yet able to make it work... */
@@ -248,27 +250,6 @@ int main(int argc, char** argv){
     }
 #endif
     
-    /****************************************************
-     * Determine start and end values so that we can    *
-     * trim any 0x00 bytes that we may have in the head *
-     * and tail of the tape scanned image.              *
-     ****************************************************/
-    int start, end;
-    for (size_t i = 0; i < bits.size(); i++){
-        if (data[i] != 0) {
-            start = i;
-            break;
-        }
-    }
-
-    for (size_t i = bits.size() - 1; i >= 0; i--){
-        if (data[i] != 0) {
-            end = i;
-            break;
-        }
-    }
-
-    
     for (int i = 0; i < N; i++){
         Point center = A + (((float) i) / (N-1)) * (B - A) - (6.5*pitch/cv::norm(ortho))*ortho;
         char text[3];
@@ -297,9 +278,52 @@ int main(int argc, char** argv){
         putText(src, text, center+textOffset, fontFace, fontScale, COLOR_BLUE, thickness, /* lineType */8, /* bottomLeftOrigin */ false);
     }
 
-    imshow(PROGRAM_NAME, src);
-    waitKey(0);
-    
+    if (with_pauses){
+        imshow(PROGRAM_NAME, src);
+        waitKey(0);
+    }
+}
+
+int main(int argc, char** argv){
+    namedWindow(PROGRAM_NAME, CV_WINDOW_AUTOSIZE);
+
+    if (argv[3][0] == '1') exchange_points = true;
+
+    init_tape_scanner();
+
+    /***************************************************
+     * Load and the image and preprocess it so that we  *
+     * have the best possible results.                  *
+     ****************************************************/
+
+    Mat src;
+
+    // Read the image
+    src = imread(argv[1], 1);
+    if (!src.data) return -1;
+
+    process_frame(src, /* with_pauses */ true);
+
+    /****************************************************
+     * Determine start and end values so that we can    *
+     * trim any 0x00 bytes that we may have in the head *
+     * and tail of the tape scanned image.              *
+     ****************************************************/
+    int start, end;
+    for (size_t i = 0; i < bits.size(); i++){
+        if (data[i] != 0) {
+            start = i;
+            break;
+        }
+    }
+
+    for (size_t i = bits.size() - 1; i >= 0; i--){
+        if (data[i] != 0) {
+            end = i;
+            break;
+        }
+    }
+
     /***********************************************
      * Output the dumped data to a ROM image file. *
      ***********************************************/
