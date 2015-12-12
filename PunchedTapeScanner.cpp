@@ -22,18 +22,29 @@ using namespace cv;
 unsigned char data[MAX_DATA_SIZE];
 bool inverted = true; //TODO: command line switch to select 
                       //      whether or not the tape is upside-down
+bool exchange_points = false;
+unsigned char BIT_MASK = 0x7F;
 
 void set_bit(int addr, int bit){
+    //do not attempt to write data off-bounds
+    if (addr < 0 || addr > MAX_DATA_SIZE)
+        return;
+
+    //compensate for the extra spacing
+    //due to the reference dots
     if (bit > 5) {
         bit--;
     }
 
+    //turn on the specified bit
     data[addr] |= (1 << (7-bit));
 }
 
 int main(int argc, char** argv){
     namedWindow(PROGRAM_NAME, CV_WINDOW_AUTOSIZE);
 
+    if (argv[3][0] == '1') exchange_points = true;
+    
     /*******************************************************************
      * This program will analize and image of a scanned punched        *
      * tape and will detect the patterns of holes in order to          *
@@ -170,7 +181,36 @@ int main(int argc, char** argv){
 
     imshow(PROGRAM_NAME, src);
     waitKey(0);
-    
+
+    if (exchange_points){
+        Point tmp = A;
+        A = B;
+        B = tmp;        
+    }
+
+    Point ortho((B - A).y, -(B - A).x); //AB rotated 90 degrees
+
+    radius = 8;
+    double fontScale = 1;
+    int baseline=0;
+    int fontFace=1;
+    double thickness=2;
+    for (int i = 0; i < N; i++){
+        Point center = A + (((float) i) / (N-1)) * (B - A) - (5.8*pitch/cv::norm(ortho))*ortho;
+        char text[3];
+        sprintf(text, "%02X", i);
+        Size textSize = getTextSize(text, fontFace, fontScale, thickness, &baseline);
+
+        // center the text
+        Point textOffset((-textSize.width)/2,
+                         (textSize.height)/2);
+        
+        putText(src, text, center+textOffset, fontFace, fontScale, COLOR_RED, thickness, /* lineType */8, /* bottomLeftOrigin */ false);
+    }
+
+    imshow(PROGRAM_NAME, src);
+    waitKey(0);
+
 #if 0
     /* This is the new implementation, but I was not yet able to make it work... */
 
@@ -202,7 +242,6 @@ int main(int argc, char** argv){
 
     for (size_t i = 0; i < bits.size(); i++){
         Point bit_vector = Point(cvRound(bits[i][0]), cvRound(bits[i][1])) - A;
-        Point ortho((B - A).y, -(B - A).x); //rotate 90 degrees
         double x = cv::norm(bit_vector.dot(B - A) / cv::norm(B - A));
         double y = cv::norm((bit_vector + (5*pitch/cv::norm(ortho))*ortho).dot(ortho) / cv::norm(ortho));
         set_bit((int) floor(x/pitch + 0.5), (int) floor(y/pitch + 0.5));
@@ -229,11 +268,43 @@ int main(int argc, char** argv){
         }
     }
 
+    
+    for (int i = 0; i < N; i++){
+        Point center = A + (((float) i) / (N-1)) * (B - A) - (6.5*pitch/cv::norm(ortho))*ortho;
+        char text[3];
+        sprintf(text, "%02X", data[i]);
+        Size textSize = getTextSize(text, fontFace, fontScale, thickness, &baseline);
+
+        // center the text
+        Point textOffset((-textSize.width)/2,
+                         (textSize.height)/2);
+        
+        putText(src, text, center+textOffset, fontFace, fontScale, COLOR_GREY, thickness, /* lineType */8, /* bottomLeftOrigin */ false);
+    }
+
+    fontScale += 1;
+    for (int i = 0; i < N; i++){
+        Point center = A + (((float) i) / (N-1)) * (B - A) - (7.2*pitch/cv::norm(ortho))*ortho;
+        char text[2];
+        data[i] &= BIT_MASK;
+        sprintf(text, "%c", data[i]);
+        Size textSize = getTextSize(text, fontFace, fontScale, thickness, &baseline);
+
+        // center the text
+        Point textOffset((-textSize.width)/2,
+                         (textSize.height)/2);
+        
+        putText(src, text, center+textOffset, fontFace, fontScale, COLOR_BLUE, thickness, /* lineType */8, /* bottomLeftOrigin */ false);
+    }
+
+    imshow(PROGRAM_NAME, src);
+    waitKey(0);
+    
     /***********************************************
      * Output the dumped data to a ROM image file. *
      ***********************************************/
 
-    FILE* fp = fopen("output.rom", "wb");
+    FILE* fp = fopen(argv[2], "wb");
     if (inverted){
         for (size_t i = end; i >= start; i--){
             printf ("[%02X] %02X '%c'\n", (unsigned int) (end-i), data[i], data[i]);
