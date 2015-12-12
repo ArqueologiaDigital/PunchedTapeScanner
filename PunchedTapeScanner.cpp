@@ -61,23 +61,20 @@ void init_tape_scanner(){
 void process_frame(Mat src, bool with_pauses){
     Mat src_gray;
 
-    if (with_pauses){
-        imshow(PROGRAM_NAME, src);
-        waitKey(0);
-    }
+    imshow(PROGRAM_NAME, src);
+    if (with_pauses) waitKey(0);
 
     // Convert it to gray
     cvtColor(src, src_gray, CV_BGR2GRAY);
+
     imshow(PROGRAM_NAME, src_gray);
-    waitKey(0);
+    if (with_pauses) waitKey(0);
 
     // Reduce the noise so we avoid false circle detection
     GaussianBlur(src_gray, src_gray, Size(9, 9), 2, 2);
 
-    if (with_pauses){
-        imshow(PROGRAM_NAME, src_gray);
-        waitKey(0);
-    }
+    imshow(PROGRAM_NAME, src_gray);
+    if (with_pauses) waitKey(0);
 
     /****************************************************
      * Detect geometric elements in the provided image. *
@@ -155,10 +152,8 @@ void process_frame(Mat src, bool with_pauses){
         circle(src, center, radius, COLOR_YELLOW, 3, 8, 0);
     }
 
-    if (with_pauses){
-        imshow(PROGRAM_NAME, src);
-        waitKey(0);
-    }
+    imshow(PROGRAM_NAME, src);
+    if (with_pauses) waitKey(0);
 
     for (size_t i = 0; i < bits.size(); i++){
         Point center(cvRound(bits[i][0]), cvRound(bits[i][1]));
@@ -166,10 +161,8 @@ void process_frame(Mat src, bool with_pauses){
         circle(src, center, radius, COLOR_GREEN, 3, 8, 0);
     }
 
-    if (with_pauses){
-        imshow(PROGRAM_NAME, src);
-        waitKey(0);
-    }
+    imshow(PROGRAM_NAME, src);
+    if (with_pauses) waitKey(0);
 
     radius = 8;
     for (int i = 0; i < N; i++){
@@ -177,10 +170,8 @@ void process_frame(Mat src, bool with_pauses){
         circle(src, center, radius, COLOR_RED, 3, 8, 0);
     }
 
-    if (with_pauses){
-        imshow(PROGRAM_NAME, src);
-        waitKey(0);
-    }
+    imshow(PROGRAM_NAME, src);
+    if (with_pauses) waitKey(0);
 
     if (exchange_points){
         Point tmp = A;
@@ -208,10 +199,8 @@ void process_frame(Mat src, bool with_pauses){
         putText(src, text, center+textOffset, fontFace, fontScale, COLOR_RED, thickness, /* lineType */8, /* bottomLeftOrigin */ false);
     }
 
-    if (with_pauses){
-        imshow(PROGRAM_NAME, src);
-        waitKey(0);
-    }
+    imshow(PROGRAM_NAME, src);
+    if (with_pauses) waitKey(0);
 
 #if 0
     /* This is the new implementation, but I was not yet able to make it work... */
@@ -278,10 +267,49 @@ void process_frame(Mat src, bool with_pauses){
         putText(src, text, center+textOffset, fontFace, fontScale, COLOR_BLUE, thickness, /* lineType */8, /* bottomLeftOrigin */ false);
     }
 
-    if (with_pauses){
-        imshow(PROGRAM_NAME, src);
-        waitKey(0);
+    imshow(PROGRAM_NAME, src);
+}
+
+void output_rom_file(const char* rom_filename){
+
+    /****************************************************
+     * Determine start and end values so that we can    *
+     * trim any 0x00 bytes that we may have in the head *
+     * and tail of the tape scanned image.              *
+     ****************************************************/
+
+    int start, end;
+    for (size_t i = 0; i < bits.size(); i++){
+        if (data[i] != 0) {
+            start = i;
+            break;
+        }
     }
+
+    for (size_t i = bits.size() - 1; i >= 0; i--){
+        if (data[i] != 0) {
+            end = i;
+            break;
+        }
+    }
+
+    /***********************************************
+     * Output the dumped data to a ROM image file. *
+     ***********************************************/
+
+    FILE* fp = fopen(rom_filename, "wb");
+    if (inverted){
+        for (size_t i = end; i >= start; i--){
+            printf ("[%02X] %02X '%c'\n", (unsigned int) (end-i), data[i], data[i]);
+            fwrite(&data[i], 1, 1, fp);
+        }
+    } else {
+        for(size_t i = start; i <= end; i++){
+            printf ("[%02X] %02X '%c'\n", (unsigned int) (i-start), data[i], data[i]);
+            fwrite(&data[i], 1, 1, fp);
+        }
+    }
+    fclose(fp);
 }
 
 int main(int argc, char** argv){
@@ -304,48 +332,11 @@ int main(int argc, char** argv){
 
     process_frame(src, /* with_pauses */ true);
 
-    /****************************************************
-     * Determine start and end values so that we can    *
-     * trim any 0x00 bytes that we may have in the head *
-     * and tail of the tape scanned image.              *
-     ****************************************************/
-    int start, end;
-    for (size_t i = 0; i < bits.size(); i++){
-        if (data[i] != 0) {
-            start = i;
-            break;
-        }
-    }
+    output_rom_file(argv[2]);
 
-    for (size_t i = bits.size() - 1; i >= 0; i--){
-        if (data[i] != 0) {
-            end = i;
-            break;
-        }
-    }
-
-    /***********************************************
-     * Output the dumped data to a ROM image file. *
-     ***********************************************/
-
-    FILE* fp = fopen(argv[2], "wb");
-    if (inverted){
-        for (size_t i = end; i >= start; i--){
-            printf ("[%02X] %02X '%c'\n", (unsigned int) (end-i), data[i], data[i]);
-            fwrite(&data[i], 1, 1, fp);
-        }
-    } else {
-        for(size_t i = start; i <= end; i++){
-            printf ("[%02X] %02X '%c'\n", (unsigned int) (i-start), data[i], data[i]);
-            fwrite(&data[i], 1, 1, fp);
-        }
-    }
-    fclose(fp);
-
-    /***************************************************
-     * Display the image in a window and wait for      *
-     * the user to press any key to close the program. *
-     ***************************************************/
+    /************************************************************
+     * Wait for the user to press any key to close the program. *
+     ************************************************************/
     waitKey(0);    
     return 0;
 }
