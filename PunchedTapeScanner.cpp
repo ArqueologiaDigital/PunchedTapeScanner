@@ -278,7 +278,7 @@ void output_rom_file(const char* rom_filename){
      * and tail of the tape scanned image.              *
      ****************************************************/
 
-    int start, end;
+    int start=-1, end=-1;
     for (size_t i = 0; i < bits.size(); i++){
         if (data[i] != 0) {
             start = i;
@@ -297,19 +297,11 @@ void output_rom_file(const char* rom_filename){
      * Output the dumped data to a ROM image file. *
      ***********************************************/
 
-    FILE* fp = fopen(rom_filename, "wb");
-    if (inverted){
-        for (size_t i = end; i >= start; i--){
-            printf ("[%02X] %02X '%c'\n", (unsigned int) (end-i), data[i], data[i]);
-            fwrite(&data[i], 1, 1, fp);
-        }
-    } else {
-        for(size_t i = start; i <= end; i++){
-            printf ("[%02X] %02X '%c'\n", (unsigned int) (i-start), data[i], data[i]);
-            fwrite(&data[i], 1, 1, fp);
-        }
+    if (start != -1 && end != -1){
+        FILE* fp = fopen(rom_filename, "wb");
+        fwrite(&data[start], sizeof(unsigned char), end-start+1, fp);
+        fclose(fp);
     }
-    fclose(fp);
 }
 
 int main(int argc, char** argv){
