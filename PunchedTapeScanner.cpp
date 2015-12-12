@@ -23,7 +23,7 @@ unsigned char data[MAX_DATA_SIZE];
 bool inverted = true; //TODO: command line switch to select 
                       //      whether or not the tape is upside-down
 bool exchange_points = false;
-unsigned char BIT_MASK = 0x7F;
+unsigned char BIT_MASK = 0xFF;
 
 // These vectors will be used to store the coordinates and radius of
 // the detected holes in the scanned image of the punched tape.
