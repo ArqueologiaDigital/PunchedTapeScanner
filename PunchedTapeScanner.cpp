@@ -307,6 +307,14 @@ void output_rom_file(const char* rom_filename){
 int main(int argc, char** argv){
     namedWindow(PROGRAM_NAME, CV_WINDOW_AUTOSIZE);
 
+    if (argc < 4) {
+        printf("\n\tusage: %s <punched_tape_image.png> <output.rom> <exchange_points>\n", argv[0]);
+        printf("\n\t  exchange_points must be eigther 0 or 1");
+        printf("\n\t  and it indicates whether or not the data in the tape image is flipped.\n");
+        printf("\n\t  (yes... this should ideally be automatically detected in a future implementation!)\n\n");
+        return -1;
+    }
+
     if (argv[3][0] == '1') exchange_points = true;
 
     init_tape_scanner();
