@@ -27,7 +27,7 @@ unsigned char BIT_MASK = 0xFF;
 
 // These vectors will be used to store the coordinates and radius of
 // the detected holes in the scanned image of the punched tape.
-vector<Vec3f> reference_dots, bits;
+std::vector<Vec3f> reference_dots, bits;
 
 void set_bit(int addr, int bit){
     //do not attempt to write data off-bounds
