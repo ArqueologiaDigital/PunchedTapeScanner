@@ -46,7 +46,7 @@ void set_bit(int addr, int bit){
 
 void init_tape_scanner(){
     /*******************************************************************
-     * This program will analize and image of a scanned punched        *
+     * This program will analize an image of a scanned punched         *
      * tape and will detect the patterns of holes in order to          *
      * generate an output ROM file with the data contents originaly    *
      * stored in the tape.                                             *
@@ -57,7 +57,7 @@ void init_tape_scanner(){
         data[i] = 0;
     }
 }
-
+// TODO: Break it down into smaller functions, each responsible for a specific subtask.
 void process_frame(Mat src, bool with_pauses){
     Mat src_gray;
 
@@ -100,23 +100,23 @@ void process_frame(Mat src, bool with_pauses){
     // to calculate how many bytes are stored in the punched tape.
     Point A, B;
 
-    double new_d;  
+    double new_distance;  
     double max_distance = 0;
     double min_distance;
     for (size_t i = 0; i < reference_dots.size() - 1; i++){
         for (size_t j = i+1; j < reference_dots.size(); j++){
             Point I(reference_dots[i][0], reference_dots[i][1]);
             Point J(reference_dots[j][0], reference_dots[j][1]);
-            new_d = cv::norm(I - J);
+            new_distance = cv::norm(I - J);
 
             if (i==0 && j==1)
-                min_distance = new_d;
+                min_distance = new_distance;
 
             if (new_d < min_distance)
-                min_distance = new_d;
+                min_distance = new_distance;
 
             if (new_d > max_distance){
-                max_distance = new_d;
+                max_distance = new_distance;
                 A = I;
                 B = J;
             }
@@ -130,20 +130,20 @@ void process_frame(Mat src, bool with_pauses){
         for (size_t j = i+1; j < reference_dots.size(); j++){
             Point I(reference_dots[i][0], reference_dots[i][1]);
             Point J(reference_dots[j][0], reference_dots[j][1]);
-            new_d = cv::norm(I - J);
+            new_distance = cv::norm(I - J);
 
-            if (new_d < 1.5 * min_distance){
-                pitch += new_d;
+            if (new_distance < 1.5 * min_distance){
+                pitch += new_distance;
                 count ++;
             }
         }
     }
     pitch /= count;
     
-    // N is the number of rows of data detected
+    // The number of rows of data detected
     // in the scanned image of the punched tape.
-    int N = floor(max_distance / pitch) + 1;
-    printf("N = %d\n", N);
+    int rowsOfData = floor(max_distance / pitch) + 1;
+    printf("Rows of Data = %d\n", rowsOfData);
 
     int radius;
     for (size_t i = 0; i < reference_dots.size(); i++){
@@ -165,8 +165,8 @@ void process_frame(Mat src, bool with_pauses){
     if (with_pauses) waitKey(0);
 
     radius = 8;
-    for (int i = 0; i < N; i++){
-        Point center = A + (((float) i) / (N-1)) * (B - A);
+    for (int i = 0; i < rowsOfData; i++){
+        Point center = A + (((float) i) / (rowsOfData-1)) * (B - A);
         circle(src, center, radius, COLOR_RED, 3, 8, 0);
     }
 
@@ -186,8 +186,8 @@ void process_frame(Mat src, bool with_pauses){
     int baseline=0;
     int fontFace=1;
     double thickness=2;
-    for (int i = 0; i < N; i++){
-        Point center = A + (((float) i) / (N-1)) * (B - A) - (5.8*pitch/cv::norm(ortho))*ortho;
+    for (int i = 0; i < rowsOfData; i++){
+        Point center = A + (((float) i) / (rowsOfData-1)) * (B - A) - (5.8*pitch/cv::norm(ortho))*ortho;
         char text[3];
         sprintf(text, "%02X", i);
         Size textSize = getTextSize(text, fontFace, fontScale, thickness, &baseline);
@@ -239,8 +239,8 @@ void process_frame(Mat src, bool with_pauses){
     }
 #endif
     
-    for (int i = 0; i < N; i++){
-        Point center = A + (((float) i) / (N-1)) * (B - A) - (6.5*pitch/cv::norm(ortho))*ortho;
+    for (int i = 0; i < rowsOfData; i++){
+        Point center = A + (((float) i) / (rowsOfData-1)) * (B - A) - (6.5*pitch/cv::norm(ortho))*ortho;
         char text[3];
         sprintf(text, "%02X", data[i]);
         Size textSize = getTextSize(text, fontFace, fontScale, thickness, &baseline);
@@ -253,8 +253,8 @@ void process_frame(Mat src, bool with_pauses){
     }
 
     fontScale += 1;
-    for (int i = 0; i < N; i++){
-        Point center = A + (((float) i) / (N-1)) * (B - A) - (7.2*pitch/cv::norm(ortho))*ortho;
+    for (int i = 0; i < rowsOfData; i++){
+        Point center = A + (((float) i) / (rowsOfData-1)) * (B - A) - (7.2*pitch/cv::norm(ortho))*ortho;
         char text[2];
         data[i] &= BIT_MASK;
         sprintf(text, "%c", data[i]);
@@ -320,7 +320,7 @@ int main(int argc, char** argv){
     init_tape_scanner();
 
     /***************************************************
-     * Load and the image and preprocess it so that we  *
+     * Load the image and preprocess it so that we      *
      * have the best possible results.                  *
      ****************************************************/
 
