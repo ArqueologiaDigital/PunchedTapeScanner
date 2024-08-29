@@ -65,7 +65,7 @@ void process_frame(Mat src, bool with_pauses){
     if (with_pauses) waitKey(0);
 
     // Convert it to gray
-    cvtColor(src, src_gray, CV_BGR2GRAY);
+    cvtColor(src, src_gray, COLOR_BGR2GRAY);
 
     imshow(PROGRAM_NAME, src_gray);
     if (with_pauses) waitKey(0);
@@ -84,8 +84,8 @@ void process_frame(Mat src, bool with_pauses){
     //TODO: Document the meaning of the parameters in these function calls.
     //TODO: Perhaps add UI controls or command-line options
     //      to tweak these parameters of the Hough Transforms.
-    HoughCircles(src_gray, reference_dots, CV_HOUGH_GRADIENT, 1, 10, 200, 15, 0, 7); // The reference dots are smaller
-    HoughCircles(src_gray, bits, CV_HOUGH_GRADIENT, 1, 10, 200, 15, 9, 30); // And the bit holes are a bit larger
+    HoughCircles(src_gray, reference_dots, HOUGH_GRADIENT, 1, 10, 200, 15, 0, 7); // The reference dots are smaller
+    HoughCircles(src_gray, bits, HOUGH_GRADIENT, 1, 10, 200, 15, 9, 30); // And the bit holes are a bit larger
 
     /************************************************************
      * Detect the regularity of reference holes so that we      *
@@ -305,7 +305,7 @@ void output_rom_file(const char* rom_filename){
 }
 
 int main(int argc, char** argv){
-    namedWindow(PROGRAM_NAME, CV_WINDOW_AUTOSIZE);
+    namedWindow(PROGRAM_NAME, WINDOW_AUTOSIZE);
 
     if (argc < 4) {
         printf("\n\tusage: %s <punched_tape_image.png> <output.rom> <exchange_points>\n", argv[0]);
