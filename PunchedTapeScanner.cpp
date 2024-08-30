@@ -278,15 +278,17 @@ void output_rom_file(const char* rom_filename){
      * and tail of the tape scanned image.              *
      ****************************************************/
 
-    int start=-1, end=-1;
-    for (size_t i = 0; i < bits.size(); i++){
+    int start=-1, end=-1, max = bits.size();
+    if (max > MAX_DATA_SIZE) max = MAX_DATA_SIZE;
+
+    for (size_t i = 0; i < max; i++){
         if (data[i] != 0) {
             start = i;
             break;
         }
     }
 
-    for (size_t i = bits.size() - 1; i >= 0; i--){
+    for (size_t i = max - 1; i >= 0; i--){
         if (data[i] != 0) {
             end = i;
             break;
