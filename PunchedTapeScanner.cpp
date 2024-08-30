@@ -112,10 +112,10 @@ void process_frame(Mat src, bool with_pauses){
             if (i==0 && j==1)
                 min_distance = new_distance;
 
-            if (new_d < min_distance)
+            if (new_distance < min_distance)
                 min_distance = new_distance;
 
-            if (new_d > max_distance){
+            if (new_distance > max_distance){
                 max_distance = new_distance;
                 A = I;
                 B = J;
